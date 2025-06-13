@@ -1,40 +1,155 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Screen Share Viewer</title>
     <style>
-        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        img { max-width: 100%; max-height: 100%; }
+        body {
+            margin: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #screen {
+            max-width: 100%;
+            max-height: 100%;
+            cursor: crosshair;
+        }
+
+        canvas {
+            display: none;
+        }
     </style>
 </head>
+
 <body>
     <img id="screen" alt="Screen Share">
+    <canvas id="canvas"></canvas>
     <script>
-        // Replace with your ZeroTier IP (e.g., 192.168.x.x)
-        const ws = new WebSocket('ws://192.168.196.87:8080');
-
+        const ws = new WebSocket('ws://192.168.196.87:8080'); // Replace with your ZeroTier IP
         const screen = document.getElementById('screen');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
 
+        // Your screen resolution (adjust if needed)
+        const serverScreenWidth = 3840 * 1.5; //adjusted for scaling //1920; // Your PC's screen width
+        const serverScreenHeight = 2160 * 1.5;//1080; // Your PC's screen height
+
+        // Queue for events if WebSocket isn't open
+        let eventQueue = [];
+
+        // Send event or queue it
+        function sendEvent(data) {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(data));
+            } else {
+                console.log('WebSocket not open, queuing event:', data);
+                eventQueue.push(data);
+            }
+        }
+
+        // Process queue when WebSocket opens
         ws.onopen = () => {
             console.log('Connected to server');
+            // Send queued events
+            while (eventQueue.length > 0) {
+                ws.send(JSON.stringify(eventQueue.shift()));
+            }
         };
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'image') {
                 screen.src = data.data;
+                canvas.width = screen.width;
+                canvas.height = screen.height;
             }
         };
 
         ws.onclose = () => {
             console.log('Disconnected');
             screen.src = '';
+            eventQueue = []; // Clear queue
         };
 
         ws.onerror = (error) => {
             console.error('WebSocket error:', error);
         };
+
+        // Mouse move
+        screen.addEventListener('mousemove', (e) => {
+            const scaleX = serverScreenWidth / screen.naturalWidth;
+            const scaleY = serverScreenHeight / screen.naturalHeight;
+            const x = Math.round((e.clientX - rect.left) * (screen.naturalWidth / rect.width) * scaleX);
+            const y = Math.round((e.clientY - rect.top) * (screen.naturalHeight / rect.height) * scaleY);
+            sendEvent({
+                type: 'mouse_move',
+                x: x,
+                y: y
+            });
+        });
+
+        // Let's try this on a single monitor machine
+
+        // screen.addEventListener('mousemove', (e) => {
+        //     if (!isImageLoaded) {
+        //         console.log('Image not loaded, skipping mousemove');
+        //         return;
+        //     }
+        //     const rect = screen.getBoundingClientRect();
+        //     const scaleX = serverScreenWidth / screen.naturalWidth;
+        //     const scaleY = serverScreenHeight / screen.naturalHeight;
+        //     const x = Math.round((e.clientX - rect.left) * (screen.naturalWidth / rect.width) * scaleX);
+        //     const y = Math.round((e.clientY - rect.top) * (screen.naturalHeight / rect.height) * scaleY);
+        //     if (x >= 0 && x <= serverScreenWidth && y >= 0 && y <= serverScreenHeight) {
+        //         console.log('Mouse coords:', {
+        //             clientX: e.clientX,
+        //             clientY: e.clientY,
+        //             rectLeft: rect.left,
+        //             rectTop: rect.top,
+        //             naturalWidth: screen.naturalWidth,
+        //             rectWidth: rect.width,
+        //             scaledX: x,
+        //             scaledY: y
+        //         });
+        //         sendEvent({
+        //             type: 'mouse_move',
+        //             x: x,
+        //             y: y
+        //         });
+        //     } else {
+        //         console.log('Invalid coords:', { x, y });
+        //     }
+        // });
+
+        // Mouse click
+        screen.addEventListener('click', (e) => {
+            sendEvent({
+                type: 'mouse_click',
+                button: 'left'
+            });
+        });
+
+        screen.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            sendEvent({
+                type: 'mouse_click',
+                button: 'right'
+            });
+        });
+
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            sendEvent({
+                type: 'key_press',
+                key: e.key.toLowerCase()
+            });
+        });
     </script>
 </body>
+
 </html>

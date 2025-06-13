@@ -1,5 +1,6 @@
 const WebSocket = require('ws');
 const screenshot = require('screenshot-desktop');
+const robot = require('robotjs');
 
 // Create WebSocket server on port 8080
 const wss = new WebSocket.Server({ port: 8080 });
@@ -37,6 +38,23 @@ wss.on('connection', (ws) => {
     // Keep connection alive
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
+
+    // Handle client control events
+    ws.on('message', (message) => {
+        try {
+            console.log('Received:', message); // Debug log
+            const data = JSON.parse(message);
+            if (data.type === 'mouse_move') {
+                robot.moveMouse(data.x, data.y);
+            } else if (data.type === 'mouse_click') {
+                robot.mouseClick(data.button); // 'left' or 'right'
+            } else if (data.type === 'key_press') {
+                robot.keyTap(data.key);
+            }
+        } catch (err) {
+            console.error('Control error:', err);
+        }
+    });
 });
 
 // Ping clients to check if alive
@@ -48,21 +66,7 @@ setInterval(() => {
     });
 }, 30000);
 
-// Handle client control events
-ws.on('message', (message) => {
-    try {
-        const data = JSON.parse(message);
-        if (data.type === 'mouse_move') {
-            robot.moveMouse(data.x, data.y);
-        } else if (data.type === 'mouse_click') {
-            robot.mouseClick(data.button); // 'left' or 'right'
-        } else if (data.type === 'key_press') {
-            robot.keyTap(data.key);
-        }
-    } catch (err) {
-        console.error('Control error:', err);
-    }
-});
+
 
 
 //===========================================

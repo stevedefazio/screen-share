@@ -1,2 +1,2 @@
 const robot = require('robotjs');
-robot.moveMouse(100, 100);
+robot.moveMouse(0, 0);
