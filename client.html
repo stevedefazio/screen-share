@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Screen Share Viewer</title>
+    <style>
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        img { max-width: 100%; max-height: 100%; }
+    </style>
+</head>
+<body>
+    <img id="screen" alt="Screen Share">
+    <script>
+        // Replace with your ZeroTier IP (e.g., 192.168.x.x)
+        const ws = new WebSocket('ws://192.168.196.87:8080');
+
+        const screen = document.getElementById('screen');
+
+        ws.onopen = () => {
+            console.log('Connected to server');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'image') {
+                screen.src = data.data;
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('Disconnected');
+            screen.src = '';
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    </script>
+</body>
+</html>
