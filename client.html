@@ -80,18 +80,33 @@
             console.error('WebSocket error:', error);
         };
 
+
         // Mouse move
         screen.addEventListener('mousemove', (e) => {
-            const scaleX = serverScreenWidth / screen.naturalWidth;
-            const scaleY = serverScreenHeight / screen.naturalHeight;
-            const x = Math.round((e.clientX - rect.left) * (screen.naturalWidth / rect.width) * scaleX);
-            const y = Math.round((e.clientY - rect.top) * (screen.naturalHeight / rect.height) * scaleY);
-            sendEvent({
+            const rect = screen.getBoundingClientRect();
+            const scaleX = serverScreenWidth / rect.width;
+            const scaleY = serverScreenHeight / rect.height;
+            const x = Math.round((e.clientX - rect.left) * scaleX);
+            const y = Math.round((e.clientY - rect.top) * scaleY);
+            ws.send(JSON.stringify({
                 type: 'mouse_move',
                 x: x,
                 y: y
-            });
+            }));
         });
+        
+        // Mouse move
+        // screen.addEventListener('mousemove', (e) => {
+        //     const scaleX = serverScreenWidth / screen.naturalWidth;
+        //     const scaleY = serverScreenHeight / screen.naturalHeight;
+        //     const x = Math.round((e.clientX - rect.left) * (screen.naturalWidth / rect.width) * scaleX);
+        //     const y = Math.round((e.clientY - rect.top) * (screen.naturalHeight / rect.height) * scaleY);
+        //     sendEvent({
+        //         type: 'mouse_move',
+        //         x: x,
+        //         y: y
+        //     });
+        // });
 
         // Let's try this on a single monitor machine
 
